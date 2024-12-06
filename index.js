@@ -3,10 +3,14 @@ const morgan = require('morgan');
 const cors = require('cors')
 
 const app = express()
+const mongoose = require('mongoose')
 app.use(express.json())
 app.use(express.static('dist'))
 app.use(cors())
-app.use(morgan('tiny'));
+app.use(morgan('tiny'))
+
+require('dotenv').config()
+const Person = require('./person')
 
 let persons = [
     { 
@@ -42,30 +46,23 @@ app.get('/', (request, response) => {
 })
 
 app.post('/api/persons', (request, response) => {
-    const person = request.body
-    
-    if (persons.find(x => x.name === person.name) !== undefined){
-        console.log({ error: 'name must be unique' })
-    }else if(person.name === undefined || person.number === undefined){
-        console.log({ error: 'name&number need to be defined' })
-    }
-    else{
-        console.log(person)
-        response.json(person)
-    }
-    
-})
+    const person = new Person({
+      name: request.body.name,
+      number: request.body.number,
+      id: request.body.id,
+    })
+    console.log(person)
+    person.save().then(result => {
+      console.log(`Added ${person.name} number ${person.number} to phonebook`)
+      mongoose.connection.close()
+    })
+  })
   
 
 app.get('/api/persons', (request, response) => {
-    const randomID = Math.random(1,1000000) * 1000000
-    person = {
-        "id": randomID,
-        "name": "Ada Lovelace", 
-        "number": "39-44-5323523"
-    }
-    persons = persons.concat(person)
-    response.json(persons)
+    Person.find({}).then(person => {
+        response.json(person)
+    })
 })
 
 app.get('/info',(request, response) => {
@@ -92,7 +89,7 @@ app.delete('/api/persons/:id',(request, response) => {
 })
 
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
